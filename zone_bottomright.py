@@ -1,30 +1,42 @@
-from uagents import Agent, Context, Bureau, Model
-from enum import Enum
-import random
-import time
-import environment
-import police
-
-radar_bottomright = Agent(name="radar_bottomright", seed="radar_bottomright recovery phrase")
+from uagents import Context
+from environment import Guys
+from environment import NeedHelp
+from environment import StopSearching
+from environment import matrix
+from environment import police_agent
+from environment import radar_upleft
+from environment import radar_upright
+from environment import radar_bottomleft
+from environment import radar_bottomright
 
 @radar_bottomright.on_interval(period=0.1)
 async def scan_area(ctx: Context):
     i = ctx.storage.get("i")
     j = ctx.storage.get("j")
-    if environment.matrix[i][j] == environment.Guys.BAD_GUY:
+    if matrix[i][j] == Guys.BAD_GUY:
         ctx.logger.info("bad guy found! calling for HELP: ({}, {})".format(i, j))
-        await ctx.send(police.police_agent.address, environment.NeedHelp(coordinates=(i, j)))
+        ctx.storage.set("moving", False)
+        await ctx.send(police_agent.address, NeedHelp(coordinates=(i, j)))
+        await ctx.send(radar_upleft.address, StopSearching())
+        await ctx.send(radar_upright.address, StopSearching())
+        await ctx.send(radar_bottomleft.address, StopSearching())
     else:
         ctx.logger.info("not bad guy at: ({}, {})".format(i, j))
     
-    # go to next area
-    if j + 1 < ctx.storage.get("j_limit"):
-        ctx.storage.set("j", j + 1)
-        # print(j)
-    else:
-        if i + 1 < ctx.storage.get("i_limit"):
-            ctx.storage.set("i", i + 1)
-            ctx.storage.set("j", 5)
+    moving = ctx.storage.get("moving")
+    if moving:
+        # go to next area
+        if j + 1 < ctx.storage.get("j_end"):
+            ctx.storage.set("j", j + 1)
         else:
-            ctx.storage.set("i", 5)
-            ctx.storage.set("j", 5)
+            if i + 1 < ctx.storage.get("i_end"):
+                ctx.storage.set("i", i + 1)
+                ctx.storage.set("j", ctx.storage.get("j_start"))
+            else:
+                ctx.storage.set("i", ctx.storage.get("i_start"))
+                ctx.storage.set("j", ctx.storage.get("j_start"))
+
+@radar_bottomright.on_message(model=StopSearching, replies=set())
+async def give_help(ctx: Context, sender: str, msg: StopSearching):
+    ctx.storage.set("moving", False)
+    ctx.logger.info("radar bottom right stopped-----------------------------")

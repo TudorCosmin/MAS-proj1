@@ -1,6 +1,9 @@
 {
-    "i": 7,
-    "j": 9,
-    "i_limit": 10,
-    "j_limit": 10
+    "i": 13,
+    "j": 14,
+    "i_start": 10,
+    "j_start": 10,
+    "i_end": 20,
+    "j_end": 20,
+    "moving": false
 }
